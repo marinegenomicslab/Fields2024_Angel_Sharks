@@ -1,0 +1,80 @@
+#!/bin/Rscript
+
+######## Aimmed at Library filtering optimization ##########
+#Import Data
+print("Beginning")
+dat<-read.table(file="opt.012",header=FALSE,sep="\t")
+print("data uploaded")
+dat<-dat[,-1]
+ind<-read.table(file="opt.012.indv",header=FALSE)
+loci<-read.table(file="opt.012.pos",header=FALSE)
+
+#Add row names to data
+length(rownames(ind))
+rownames(dat)<-ind[1:nrow(ind),]
+
+#Add column names to data
+loci[,3]<-paste(loci[,1],"_",loci[,2], sep = "")
+colnames(dat)<-t(loci[,3])
+print("data concatenated")
+
+#Input levels of missingness (0 = no missing)
+ind.lev<-c(0, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+loci.lev<-c(0, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+print("input levels uploaded")
+
+#Test different combinations
+
+output<-data.frame(selection=character(),selection.criteria=numeric(),rows.left=numeric(),columns.left=numeric(), stringsAsFactors=FALSE)
+dat2<-dat
+ind.lev.temp<-ind.lev
+loci.lev.temp<-loci.lev
+
+print("initiallizing loop")
+for (i in 1:sum(length(ind.lev),length(loci.lev))){
+  cat ("Iteration", i, "\n")
+if(length(ind.lev.temp) > 0){
+  mis.ind<-as.data.frame(rowSums(dat2 == "-1"))
+  mis.ind[,2]<-mis.ind[,1]/ncol(dat2)
+  mis.ind.temp<-subset(mis.ind, mis.ind[,2]<=max(ind.lev.temp))
+  mis.ind.data.temp<-subset(dat2, rownames(dat2) %in% rownames(mis.ind.temp))
+  a<-(nrow(mis.ind.data.temp)/nrow(dat2))+(ncol(mis.ind.data.temp)/(10*ncol(dat2)))
+  cat (" indv filter =", max(ind.lev.temp), "\n")
+} else {cat (" indv filter =", min(ind.lev), "\n")}
+cat (" # indv =", nrow(mis.ind.data.temp), "\n")
+cat (" # loci =", ncol(mis.ind.data.temp), "\n")
+
+if(length(loci.lev.temp) > 0){
+  mis.loci<-as.data.frame(colSums(dat2 == "-1"))
+  mis.loci[,2]<-mis.loci[,1]/nrow(dat2)
+  mis.loci.temp<-subset(mis.loci, mis.loci[,2]<=max(loci.lev.temp))
+  mis.loci.temp<-as.vector(rownames(mis.loci.temp))
+  mis.loci.data.temp = as.data.frame(dat2[,(names(dat2) %in% mis.loci.temp)])
+  b<-(nrow(mis.loci.data.temp)/nrow(dat2))+(ncol(mis.loci.data.temp)/(10*ncol(dat2)))
+  cat (" loci filter =", max(loci.lev.temp), "\n")
+} else {cat (" loci filter =", min(loci.lev), "\n")}
+  cat (" # indv =", nrow(mis.loci.data.temp), "\n")
+  cat (" # loci =", ncol(mis.loci.data.temp), "\n")
+
+if (a > b){
+  output[i,]<-c("I",max(ind.lev.temp),nrow(mis.ind.data.temp),ncol(mis.ind.data.temp))
+  data2<-mis.ind.data.temp
+  remove<-max(ind.lev.temp)
+  ind.lev.temp<-ind.lev.temp [! ind.lev.temp %in% remove]
+}
+if (a < b){
+  output[i,]<-c("L",max(loci.lev.temp),nrow(mis.loci.data.temp),ncol(mis.loci.data.temp))
+  data2<-mis.loci.data.temp
+  remove<-max(loci.lev.temp)
+  loci.lev.temp<-loci.lev.temp [! loci.lev.temp %in% remove]
+}
+if (a == b){
+  output[i,]<-c("Either",max(loci.lev.temp),nrow(mis.loci.data.temp),ncol(mis.loci.data.temp))
+  remove<-max(ind.lev.temp)
+  ind.lev.temp<-ind.lev.temp [! ind.lev.temp %in% remove]
+  remove<-max(loci.lev.temp)
+  loci.lev.temp<-loci.lev.temp [! loci.lev.temp %in% remove]
+}
+write.table(output, file="opt.txt")
+}
+print("Loop complete")
