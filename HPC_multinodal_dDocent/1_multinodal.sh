@@ -4,7 +4,7 @@ scp <host.machine>:<data_location> .
 
 #Trimming data
 #Run on normal nodes, scripted to limit to 10 nodes
-ls | while read i; do cd $i; cp -s $WORK/bin/slurm/trim_config.file .; cp -s $WORK/Workspace/Species/references/reference.fasta .; cd ..; done
+ls | while read i; do cd $i; cp -s $WORK/slurm/trim_config.file .; cp -s $WORK/Workspace/Species/references/reference.fasta .; cd ..; done
 ls | while read i; do while [ $(squeue | grep afields | wc -l) -ge 10]; do sleep 60; done; cd $i; sbatch $WORK/slurm/dDocent_trimming.slurm; cd ..; done
 
 #Mapping data
@@ -31,7 +31,7 @@ sbatch $WORK/slurm/dDocent_bed.slurm
 
 ls *.bam | sed 's/.bam//g' > namelist
 cut -f1 -d "_" namelist > p; paste namelist p > popmap; rm p
-sbatch $WORK/bin/slurm/dDocent_cat.slurm
+sbatch $WORK/slurm/dDocent_cat.slurm
 
 #Splitting cat.bam for SNP calling
 #Number of nodes used is determined by this split script
